@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compshare - 下一代 AI 算力平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#050505',
+                        surface: '#0F0F11',
+                        surfaceHighlight: '#18181B',
+                        primary: '#6366f1', // Indigo
+                        secondary: '#a855f7', // Purple
+                        accent: '#22d3ee', // Cyan
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'SF Pro Display', 'system-ui', 'sans-serif'],
+                        mono: ['Fira Code', 'Menlo', 'monospace'],
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'float-delayed': 'float 6s ease-in-out -3s infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'spin-slow': 'spin 60s linear infinite',
+                        'border-flow': 'borderFlow 3s linear infinite',
+                        'marquee': 'marquee 25s linear infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
+                        borderFlow: {
+                            '0%': { backgroundPosition: '0% 50%' },
+                            '100%': { backgroundPosition: '100% 50%' },
+                        },
+                        marquee: {
+                            '0%': { transform: 'translateX(0%)' },
+                            '100%': { transform: 'translateX(-50%)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #050505; color: #ffffff; overflow-x: hidden; }
+        
+        .text-gradient {
+            background: linear-gradient(to right, #818cf8, #c084fc, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .bg-grid {
+            background-size: 50px 50px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+            -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.4;
+            mix-blend-mode: screen;
+            z-index: 0;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-glow {
+            position: relative;
+        }
+        
+        .btn-glow::after {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(45deg, #6366f1, #a855f7, #22d3ee);
+            z-index: -1;
+            border-radius: 9999px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            filter: blur(10px);
+        }
+        
+        .btn-glow:hover::after {
+            opacity: 0.6;
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+        }
+        
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .delay-100 { transition-delay: 0.1s; }
+        .delay-200 { transition-delay: 0.2s; }
+        .delay-300 { transition-delay: 0.3s; }
+
+        /* Hide scrollbar for code block */
+        .code-window::-webkit-scrollbar { display: none; }
+        .code-window { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .mask-image-gradient {
+            mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+        }
+
+        .fade-mask-x {
+             mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+             -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        }
+        
+        /* 增强的激活状态样式 - 极简线条风格 */
+        .active-category .active-bg { 
+            opacity: 1; 
+            border-color: rgba(129, 140, 248, 0.5); /* Indigo-400 */
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.05) 100%);
+            border-left: 4px solid #818cf8;
+        }
+        .active-category .inactive-bg { opacity: 0; }
+        
+        .active-category .category-title { 
+            color: #ffffff; 
+            text-shadow: 0 0 20px rgba(129, 140, 248, 0.5);
+        }
+        
+        /* 移除光球，防止左侧色块干扰 */
+        .active-category .active-glow { display: none !important; }
+
+        /* 修复悬停闪烁：使用 GPU 加速 */
+        .category-item {
+            transform: translateZ(0);
+            backface-visibility: hidden;
+        }
+        .category-item:hover {
+            border-color: rgba(255,255,255,0.2);
+            background-color: rgba(255,255,255,0.03);
+        }
+        
+        /* 右侧墙体切换动画 */
+        .wall-transition {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+        .wall-hidden {
+            transform: translate(-50%, -50%) scale(0.95) !important;
+            opacity: 0;
+            filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="antialiased font-sans selection:bg-indigo-500/30">
+    <!-- ... body content ... -->
+    <!-- The content is updated via JS now, need to insert the JS code at the end of body -->
+    <!-- Since I did a search replace for the specific section, I need to make sure the JS is added -->
+    
+    <!-- ... (Previous HTML content) ... -->
+
+    <!-- I will re-write the full file content to ensure scripts and styles are correct -->
+    
+    <!-- 背景装饰层 -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden">
+        <div class="absolute inset-0 bg-grid z-0"></div>
+        <!-- 还原并柔化光球分布 -->
+        <div class="orb bg-indigo-600 w-[800px] h-[800px] -top-[300px] -left-[300px] animate-pulse-slow"></div>
+        <div class="orb bg-purple-600 w-[700px] h-[700px] -bottom-[300px] -right-[300px] animate-float-delayed"></div>
+        <div class="orb bg-cyan-600/30 w-[400px] h-[400px] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-float"></div>
+    </div>
+
+    <!-- 导航栏 -->
+    <nav class="fixed w-full z-50 top-0 border-b border-white/5 bg-black/50 backdrop-blur-xl transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-2 cursor-pointer group">
+                    <img src="https://cdn.udelivrs.com/2024/11/437c3c1914197056212918f3d2cb53c1_1730962202072.png" alt="Compshare" class="h-8 w-auto" style="filter: invert(1) hue-rotate(180deg) brightness(1.2);">
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">镜像社区</a>
+                    <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">GPU实例</a>
+                    <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">模型API服务</a>
+                    <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">文档中心</a>
+                    <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">常见问题(FAQ)</a>
+                </div>
+                <div>
+                    <a href="#" class="relative inline-flex items-center justify-center px-6 py-2 overflow-hidden font-medium text-white transition duration-300 ease-out border border-white/10 rounded-full group hover:border-indigo-500/50">
+                        <span class="absolute inset-0 flex items-center justify-center w-full h-full text-white duration-300 -translate-x-full bg-indigo-600 group-hover:translate-x-0 ease">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </span>
+                        <span class="absolute flex items-center justify-center w-full h-full text-gray-300 transition-all duration-300 transform group-hover:translate-x-full ease">登录 / 注册</span>
+                        <span class="relative invisible">登录 / 注册</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero 区域：左右布局 + 3D 图形 -->
+    <div class="relative pt-32 pb-20 sm:pt-48 sm:pb-32">
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
+            <div class="grid lg:grid-cols-2 gap-16 items-center">
+                <!-- 左侧文本 -->
+                <div class="text-left reveal active">
+                    <!-- Tag Line -->
+                    <div class="inline-flex items-center gap-2 mb-8 group cursor-pointer">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-black">NEW</span>
+                        <span class="text-sm text-gray-300 group-hover:text-white transition-colors">GPU 算力池新节点上线</span>
+                        <span class="text-sm text-indigo-400 flex items-center gap-0.5 group-hover:text-indigo-300 transition-colors">
+                            即刻探索 
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </span>
+                    </div>
+                    
+                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-8 leading-tight overflow-visible">
+                        <span class="block text-white mb-2">Compshare AI Cloud</span>
+                        <span class="inline-block text-transparent bg-clip-text bg-gradient-to-r from-gray-200 via-gray-400 to-gray-600 pb-2 pr-4" style="white-space: nowrap;">面向 AI 应用，按需而动</span>
+                    </h1>
+                    
+                    <p class="mt-6 text-lg text-gray-400 max-w-2xl leading-relaxed">
+                        Compshare，一个专为 AI 而生的 GPU 云平台。
+                        简单、可靠、高性价比，支持 Docker 与虚拟机双模，助你高效完成训练与推理。
+                    </p>
+                    
+                    <div class="mt-10 mb-12">
+                        <a href="#" class="btn-glow w-full sm:w-auto relative inline-flex items-center justify-center px-10 py-4 text-base font-bold text-white bg-indigo-600 rounded-full transition-all hover:bg-indigo-700 hover:scale-105 transform duration-200 shadow-lg shadow-indigo-500/20">
+                            立即体验
+                        </a>
+                    </div>
+
+                    <!-- 底部特性列表 (Simplified Style) -->
+                    <div class="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-gray-400 font-mono">
+                        <span class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> 海量 GPU 资源</span>
+                        <span class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> 容器 & 虚机双模式</span>
+                        <span class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> 社区镜像</span>
+                        <span class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> 售后无忧</span>
+                    </div>
+                </div>
+
+                <!-- 右侧图形化演示 -->
+                <div class="relative lg:h-[600px] flex items-center justify-center reveal delay-200">
+                     <div class="absolute w-[600px] h-[600px] bg-gradient-to-l from-indigo-500/20 to-purple-500/10 rounded-full filter blur-3xl animate-pulse-slow"></div>
+                    
+                    <!-- 3D Window -->
+                    <div class="relative w-full max-w-lg code-window p-1 transform rotate-y-12 rotate-x-6 hover:rotate-0 transition-transform duration-700 perspective-1000 shadow-2xl bg-[#0c0c0e] animate-float">
+                        <div class="h-8 bg-black/40 rounded-t-lg flex items-center px-4 gap-2 border-b border-white/5">
+                            <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500/50"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500/50"></div>
+                            <div class="ml-4 text-xs text-gray-500 font-mono flex-1">compshare-cli — bash</div>
+                        </div>
+                        <div class="bg-[#0c0c0e] p-6 rounded-b-lg font-mono text-sm leading-relaxed text-gray-300 h-[320px] overflow-hidden relative text-left">
+                            <div class="space-y-2">
+                                <p><span class="text-green-400">➜</span> <span class="text-cyan-400">~</span> compshare instance create --gpu 4090</p>
+                                <p class="text-gray-500">Searching for available regions...</p>
+                                <p class="text-gray-500">Found: cn-north-1 [latency: 12ms]</p>
+                                <p>Allocating NVIDIA RTX 4090 (24GB)... <span class="text-green-400">Done</span></p>
+                                <p>Mounting volume (200GB)... <span class="text-green-400">Done</span></p>
+                                <p>Initializing environment...</p>
+                                <div class="h-1 w-full bg-gray-800 rounded-full overflow-hidden mt-2">
+                                    <div class="h-full bg-indigo-500 w-3/4 animate-[loading_2s_ease-in-out_infinite]"></div>
+                                </div>
+                                <p class="mt-4"><span class="text-green-400">✔</span> Instance <span class="text-yellow-300">i-rtx4090-001</span> is running.</p>
+                                <p>SSH Access: <span class="text-indigo-400">ssh root@192.168.1.101</span></p>
+                            </div>
+                        </div>
+
+                        <!-- 覆盖在代码窗口上的浮动卡片 -->
+                        <div class="absolute -right-12 top-20 glass-card p-3 rounded-xl animate-float hidden sm:block border border-white/10 bg-black/60 backdrop-blur-md z-20 shadow-xl">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center text-green-400 font-bold text-xs">Py</div>
+                                <div>
+                                    <div class="text-[10px] text-gray-400">PyTorch</div>
+                                    <div class="text-xs font-bold text-white">2.1.0 Ready</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="absolute -left-12 bottom-24 glass-card p-3 rounded-xl animate-float hidden sm:block border border-white/10 bg-black/60 backdrop-blur-md z-20 shadow-xl">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-xs">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                </div>
+                                <div>
+                                    <div class="text-[10px] text-gray-400">Network</div>
+                                    <div class="text-xs font-bold text-white">10 Gbps</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GPU 价格表 (Table Layout) -->
+    <div class="py-20 relative z-10 bg-black/40 border-y border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 reveal">
+            <div class="text-center mb-16">
+                <div class="inline-flex items-center gap-2 px-3 py-1 mb-6 text-xs font-medium tracking-wide text-indigo-300 uppercase bg-indigo-500/10 rounded-full border border-indigo-500/20">
+                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+                    Flexible Pricing
+                </div>
+                <h2 class="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
+                    海量 GPU 资源，<span class="text-gradient">极致性价比</span>
+                </h2>
+                <p class="text-lg text-gray-400 max-w-3xl mx-auto leading-relaxed">
+                    自建数据中心搭配超万卡规模。
+                    单实例配备 <span class="text-white font-medium">200G 免费系统盘</span>，资源丰富，即开即用。
+                </p>
+            </div>
+            
+            <div class="overflow-x-auto rounded-xl border border-white/10 glass-card">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-white/5 border-b border-white/10 text-gray-400 text-sm">
+                            <th class="p-5 font-medium whitespace-nowrap">显卡型号</th>
+                            <th class="p-5 font-medium whitespace-nowrap">显存</th>
+                            <th class="p-5 font-medium whitespace-nowrap">Compshare 价格</th>
+                            <th class="p-5 font-medium whitespace-nowrap">友商 A</th>
+                            <th class="p-5 font-medium whitespace-nowrap">友商 B</th>
+                            <th class="p-5 font-medium text-right whitespace-nowrap">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm divide-y divide-white/5">
+                        <!-- RTX 5090 -->
+                        <tr class="group hover:bg-white/5 transition-colors">
+                            <td class="p-5 font-bold text-white text-base">RTX 5090</td>
+                            <td class="p-5"><span class="bg-purple-500/20 text-purple-300 px-2 py-1 rounded text-xs">32G</span></td>
+                            <td class="p-5">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-xl font-bold text-indigo-400">¥ 2.84</span>
+                                    <span class="text-xs text-gray-500 line-through">¥ 3.16</span>
+                                </div>
+                            </td>
+                            <td class="p-5 text-gray-400">¥ 3.14</td>
+                            <td class="p-5 text-gray-500">-</td>
+                            <td class="p-5 text-right">
+                                <button class="px-4 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 text-xs font-medium hover:bg-indigo-600 hover:text-white transition-all border border-indigo-500/30 whitespace-nowrap">立即部署</button>
+                            </td>
+                        </tr>
+                        <!-- RTX 4090 48G -->
+                        <tr class="group hover:bg-white/5 transition-colors">
+                            <td class="p-5 font-bold text-white text-base">RTX 4090</td>
+                            <td class="p-5"><span class="bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded text-xs">48G</span></td>
+                            <td class="p-5">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-xl font-bold text-indigo-400">¥ 2.97</span>
+                                    <span class="text-xs text-gray-500 line-through">¥ 3.30</span>
+                                </div>
+                            </td>
+                            <td class="p-5 text-gray-400">¥ 3.14</td>
+                            <td class="p-5 text-gray-500">-</td>
+                            <td class="p-5 text-right">
+                                <button class="px-4 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 text-xs font-medium hover:bg-indigo-600 hover:text-white transition-all border border-indigo-500/30 whitespace-nowrap">立即部署</button>
+                            </td>
+                        </tr>
+                        <!-- RTX 4090 24G (Hot) -->
+                        <tr class="group hover:bg-white/5 transition-colors bg-indigo-500/5">
+                            <td class="p-5 font-bold text-white text-base relative">
+                                RTX 4090
+                                <span class="absolute top-1/2 -translate-y-1/2 -left-2 w-1 h-8 bg-indigo-500 rounded-r opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                            </td>
+                            <td class="p-5"><span class="bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded text-xs">24G</span></td>
+                            <td class="p-5">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-xl font-bold text-indigo-400">¥ 1.88</span>
+                                    <span class="text-xs text-gray-500 line-through">¥ 2.08</span>
+                                </div>
+                            </td>
+                            <td class="p-5 text-gray-400">¥ 2.08</td>
+                            <td class="p-5 text-gray-400">¥ 2.37</td>
+                            <td class="p-5 text-right">
+                                <button class="px-4 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 whitespace-nowrap">立即部署</button>
+                            </td>
+                        </tr>
+                        <!-- RTX 3090 -->
+                        <tr class="group hover:bg-white/5 transition-colors">
+                            <td class="p-5 font-bold text-white text-base">RTX 3090</td>
+                            <td class="p-5"><span class="bg-blue-500/20 text-blue-300 px-2 py-1 rounded text-xs">24G</span></td>
+                            <td class="p-5">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-xl font-bold text-white">¥ 1.08</span>
+                                    <span class="text-xs text-gray-500 line-through">¥ 1.20</span>
+                                </div>
+                            </td>
+                            <td class="p-5 text-gray-400">¥ 1.66</td>
+                            <td class="p-5 text-gray-400">¥ 1.39</td>
+                            <td class="p-5 text-right">
+                                <button class="px-4 py-1.5 rounded-lg bg-white/5 text-gray-300 text-xs font-medium hover:bg-white hover:text-black transition-all border border-white/10 whitespace-nowrap">立即部署</button>
+                            </td>
+                        </tr>
+                        <!-- RTX 3080TI -->
+                        <tr class="group hover:bg-white/5 transition-colors">
+                            <td class="p-5 font-bold text-white text-base">RTX 3080TI</td>
+                            <td class="p-5"><span class="bg-gray-500/20 text-gray-300 px-2 py-1 rounded text-xs">12G</span></td>
+                            <td class="p-5">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-xl font-bold text-white">¥ 0.66</span>
+                                    <span class="text-xs text-gray-500 line-through">¥ 0.74</span>
+                                </div>
+                            </td>
+                            <td class="p-5 text-gray-500">-</td>
+                            <td class="p-5 text-gray-500">-</td>
+                            <td class="p-5 text-right">
+                                <button class="px-4 py-1.5 rounded-lg bg-white/5 text-gray-300 text-xs font-medium hover:bg-white hover:text-black transition-all border border-white/10 whitespace-nowrap">立即部署</button>
+                            </td>
+                        </tr>
+                        <!-- RTX 2080 -->
+                        <tr class="group hover:bg-white/5 transition-colors">
+                            <td class="p-5 font-bold text-white text-base">RTX 2080</td>
+                            <td class="p-5"><span class="bg-gray-500/20 text-gray-300 px-2 py-1 rounded text-xs">8G</span></td>
+                            <td class="p-5">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-xl font-bold text-white">¥ 0.38</span>
+                                    <span class="text-xs text-gray-500 line-through">¥ 0.42</span>
+                                </div>
+                            </td>
+                            <td class="p-5 text-gray-500">-</td>
+                            <td class="p-5 text-gray-500">-</td>
+                            <td class="p-5 text-right">
+                                <button class="px-4 py-1.5 rounded-lg bg-white/5 text-gray-300 text-xs font-medium hover:bg-white hover:text-black transition-all border border-white/10 whitespace-nowrap">立即部署</button>
+                            </td>
+                        </tr>
+                        <!-- A100 -->
+                        <tr class="group hover:bg-white/5 transition-colors">
+                            <td class="p-5 font-bold text-white text-base">A100</td>
+                            <td class="p-5"><span class="bg-green-500/20 text-green-300 px-2 py-1 rounded text-xs">80G</span></td>
+                            <td class="p-5">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-xl font-bold text-white">¥ 9.68</span>
+                                    <span class="text-xs text-gray-500 line-through">¥ 10.75</span>
+                                </div>
+                            </td>
+                            <td class="p-5 text-gray-500">-</td>
+                            <td class="p-5 text-gray-400">¥ 11.00</td>
+                            <td class="p-5 text-right">
+                                <button class="px-4 py-1.5 rounded-lg bg-white/5 text-gray-300 text-xs font-medium hover:bg-white hover:text-black transition-all border border-white/10 whitespace-nowrap">立即部署</button>
+                            </td>
+                        </tr>
+                        <!-- A800 -->
+                        <tr class="group hover:bg-white/5 transition-colors">
+                            <td class="p-5 font-bold text-white text-base">A800</td>
+                            <td class="p-5"><span class="bg-green-500/20 text-green-300 px-2 py-1 rounded text-xs">80G</span></td>
+                            <td class="p-5">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-xl font-bold text-white">¥ 5.61</span>
+                                    <span class="text-xs text-gray-500 line-through">¥ 6.24</span>
+                                </div>
+                            </td>
+                            <td class="p-5 text-gray-400">¥ 6.29</td>
+                            <td class="p-5 text-gray-500">-</td>
+                            <td class="p-5 text-right">
+                                <button class="px-4 py-1.5 rounded-lg bg-white/5 text-gray-300 text-xs font-medium hover:bg-white hover:text-black transition-all border border-white/10 whitespace-nowrap">立即部署</button>
+                            </td>
+                        </tr>
+                         <!-- H20 -->
+                         <tr class="group hover:bg-white/5 transition-colors">
+                            <td class="p-5 font-bold text-white text-base">H20</td>
+                            <td class="p-5"><span class="bg-green-500/20 text-green-300 px-2 py-1 rounded text-xs">96G</span></td>
+                            <td class="p-5">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-xl font-bold text-white">¥ 6.75</span>
+                                    <span class="text-xs text-gray-500 line-through">¥ 7.50</span>
+                                </div>
+                            </td>
+                            <td class="p-5 text-gray-400">¥ 7.35</td>
+                            <td class="p-5 text-gray-400">¥ 6.80</td>
+                            <td class="p-5 text-right">
+                                <button class="px-4 py-1.5 rounded-lg bg-white/5 text-gray-300 text-xs font-medium hover:bg-white hover:text-black transition-all border border-white/10 whitespace-nowrap">立即部署</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全链路 AI 生产力工具 -->
+    <div class="py-24 border-t border-white/5 relative z-10 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-24 reveal">
+                <div class="inline-flex items-center gap-2 px-3 py-1 mb-6 text-xs font-medium tracking-wide text-purple-300 uppercase bg-purple-500/10 rounded-full border border-purple-500/20">
+                    <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
+                    Full Stack Tools
+                </div>
+                <h2 class="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
+                    全链路工具，<span class="text-gradient">加速 AI 落地</span>
+                </h2>
+                <p class="text-lg text-gray-400 max-w-3xl mx-auto leading-relaxed">
+                    提供从开发环境到模型部署的一站式解决方案。
+                    <span class="text-white font-medium">容器与虚机双模式</span>，搭配公共模型库，让开发更高效。
+                </p>
+            </div>
+
+            <div class="space-y-32">
+                <!-- Feature 1: 容器 & 虚机 -->
+                <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-24 reveal">
+                    <div class="flex-1 order-2 lg:order-1">
+                        <div class="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-8 text-2xl border border-indigo-500/20 text-indigo-400">
+                            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                        </div>
+                        <h3 class="text-3xl font-bold mb-6 text-white">容器 & 虚机双模式</h3>
+                        <p class="text-gray-400 text-lg leading-relaxed mb-8">
+                            不仅支持轻量级的 Docker 容器，更提供拥有完整内核权限的虚拟机。
+                            <span class="text-indigo-400 font-medium">预装 PyTorch, TensorFlow</span> 等主流框架，环境配置零负担。
+                        </p>
+                        <ul class="space-y-4 text-gray-400">
+                            <li class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>
+                                <span>支持 Linux & Windows 系统</span>
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>
+                                <span>公有云一致体验，无缝迁移业务</span>
+                            </li>
+                             <li class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>
+                                <span>搭配公共模型库，海量模型免下载</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="flex-1 order-1 lg:order-2 w-full">
+                        <!-- 图形演示：环境选择 -->
+                        <div class="relative rounded-2xl border border-white/10 bg-[#0c0c0e] shadow-2xl overflow-hidden group hover:border-indigo-500/30 transition-colors duration-500">
+                            <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-50"></div>
+                            <!-- Window Controls -->
+                            <div class="h-12 border-b border-white/5 bg-white/[0.02] flex items-center px-6 gap-2">
+                                <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500/50"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500/50"></div>
+                                <span class="ml-4 text-xs text-gray-600 font-mono">Environment Selector</span>
+                            </div>
+                            <!-- UI Content -->
+                            <div class="p-8 space-y-4">
+                                <div class="flex items-center gap-4 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 relative overflow-hidden group cursor-pointer transition-all hover:bg-indigo-500/20">
+                                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500"></div>
+                                    <div class="w-10 h-10 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-300 text-xl font-bold">Py</div>
+                                    <div class="flex-1">
+                                        <div class="text-white font-medium">PyTorch 2.1.0 + CUDA 12.1</div>
+                                        <div class="text-xs text-indigo-300/70 mt-1">Docker Container • Official Image</div>
+                                    </div>
+                                    <div class="w-5 h-5 rounded-full border-2 border-indigo-500 flex items-center justify-center">
+                                        <div class="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5 relative overflow-hidden group cursor-pointer hover:bg-white/5 transition-all">
+                                    <div class="w-10 h-10 rounded bg-orange-500/20 flex items-center justify-center text-orange-400 text-xl font-bold">
+                                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.008-.57-.008-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="text-gray-300 font-medium">Ubuntu 22.04 LTS</div>
+                                        <div class="text-xs text-gray-500 mt-1">Virtual Machine • SSH Enabled</div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5 relative overflow-hidden group cursor-pointer hover:bg-white/5 transition-all">
+                                    <div class="w-10 h-10 rounded bg-blue-500/20 flex items-center justify-center text-blue-400 text-xl font-bold">W</div>
+                                    <div class="flex-1">
+                                        <div class="text-gray-300 font-medium">Windows Server 2022</div>
+                                        <div class="text-xs text-gray-500 mt-1">Virtual Machine • RDP Enabled</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature 2: 网络 & 存储 -->
+                <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-24 reveal">
+                     <div class="flex-1 order-1 w-full">
+                        <!-- 图形演示：仪表盘 -->
+                        <div class="relative group">
+                            <div class="absolute inset-0 bg-purple-500/20 blur-[80px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                            <div class="relative rounded-2xl border border-white/10 bg-[#0c0c0e] shadow-2xl p-8 grid grid-cols-2 gap-6 hover:border-purple-500/30 transition-colors">
+                                <!-- Speed Card -->
+                                <div class="col-span-2 bg-gradient-to-r from-purple-900/20 to-indigo-900/20 rounded-2xl p-6 border border-white/10 relative overflow-hidden">
+                                     <div class="absolute right-0 bottom-0 opacity-10 transform translate-x-4 translate-y-4">
+                                        <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path></svg>
+                                     </div>
+                                     <div class="flex items-center justify-between mb-4">
+                                         <div class="text-sm text-gray-400 font-medium uppercase tracking-wider">Public Bandwidth</div>
+                                         <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                     </div>
+                                     <div class="text-5xl font-bold text-white mb-4">1.5 <span class="text-2xl text-purple-400 font-medium">Gbps</span></div>
+                                     <div class="space-y-1">
+                                         <div class="flex justify-between text-xs text-gray-500">
+                                             <span>Current Load</span>
+                                             <span>85%</span>
+                                         </div>
+                                         <div class="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                             <div class="h-full bg-gradient-to-r from-purple-500 to-indigo-500 w-[85%] animate-pulse"></div>
+                                         </div>
+                                     </div>
+                                </div>
+                                <!-- Disk Card -->
+                                <div class="bg-white/[0.03] rounded-2xl p-6 border border-white/5">
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-2">System Disk</div>
+                                    <div class="text-3xl font-bold text-white mb-1">200 <span class="text-base text-gray-400 font-normal">GB</span></div>
+                                    <div class="text-xs text-green-400 mt-2 bg-green-500/10 inline-block px-2 py-0.5 rounded">Free Included</div>
+                                </div>
+                                <!-- IP Card -->
+                                <div class="bg-white/[0.03] rounded-2xl p-6 border border-white/5">
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-2">Public IP</div>
+                                    <div class="text-lg font-mono text-white mb-1">112.45.xx.xx</div>
+                                    <div class="text-xs text-purple-400 mt-2 bg-purple-500/10 inline-block px-2 py-0.5 rounded">Exclusive</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 order-2">
+                        <div class="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center mb-8 text-2xl border border-purple-500/20 text-purple-400">
+                             <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        </div>
+                        <h3 class="text-3xl font-bold mb-6 text-white">200G磁盘 + 1.5G带宽</h3>
+                        <p class="text-gray-400 text-lg leading-relaxed mb-8">
+                            无需额外付费！实例搭配独立外网 IP，支持自定义 TCP/UDP 端口。
+                            <span class="text-purple-400 font-medium">学术资源加速下载</span>，Github、HuggingFace 极速直连。
+                        </p>
+                        <ul class="space-y-4 text-gray-400">
+                            <li class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>
+                                <span>高性能 SSD 存储，可灵活扩容</span>
+                            </li>
+                             <li class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>
+                                <span>支持自定义端口映射</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Feature 3: API 服务 -->
+                <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-24 reveal">
+                    <div class="flex-1 order-2 lg:order-1">
+                        <div class="w-14 h-14 bg-cyan-500/10 rounded-2xl flex items-center justify-center mb-8 text-2xl border border-cyan-500/20 text-cyan-400">
+                             <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                        </div>
+                        <h3 class="text-3xl font-bold mb-6 text-white">模型 API 服务</h3>
+                        <p class="text-gray-400 text-lg leading-relaxed mb-8">
+                            OpenAI、Gemini API 兼容。一个 Key 调用全球热门模型。
+                            <span class="text-cyan-400 font-medium">低延迟、高并发</span>，助您快速构建 AI 应用。
+                        </p>
+                        <div class="flex gap-3 flex-wrap">
+                            <span class="px-4 py-2 bg-white/5 rounded-full text-sm text-gray-300 border border-white/10 hover:border-cyan-500/50 hover:text-white transition-colors cursor-default">Llama 3</span>
+                            <span class="px-4 py-2 bg-white/5 rounded-full text-sm text-gray-300 border border-white/10 hover:border-cyan-500/50 hover:text-white transition-colors cursor-default">Mistral</span>
+                            <span class="px-4 py-2 bg-white/5 rounded-full text-sm text-gray-300 border border-white/10 hover:border-cyan-500/50 hover:text-white transition-colors cursor-default">Qwen</span>
+                            <span class="px-4 py-2 bg-white/5 rounded-full text-sm text-gray-300 border border-white/10 hover:border-cyan-500/50 hover:text-white transition-colors cursor-default">Stable Diffusion</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 order-1 lg:order-2 w-full">
+                         <!-- 图形演示：API Request -->
+                        <div class="relative rounded-2xl border border-white/10 bg-[#0c0c0e] shadow-2xl overflow-hidden group hover:border-cyan-500/30 transition-colors duration-500">
+                             <!-- Header -->
+                            <div class="h-12 border-b border-white/5 bg-white/[0.02] flex items-center px-6 justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex gap-1.5">
+                                        <div class="w-3 h-3 rounded-full bg-white/10"></div>
+                                        <div class="w-3 h-3 rounded-full bg-white/10"></div>
+                                    </div>
+                                    <span class="text-xs font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded">POST</span>
+                                    <span class="text-xs font-mono text-gray-500">/v1/chat/completions</span>
+                                </div>
+                                <span class="text-xs font-mono text-green-400 flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                    200 OK
+                                </span>
+                            </div>
+                            <div class="p-8 font-mono text-sm leading-relaxed text-gray-400 overflow-x-hidden">
+                                <div class="mb-4 pb-4 border-b border-white/5">
+                                    <span class="text-purple-400">curl</span> <span class="text-gray-300">https://api.compshare.cn/v1/chat</span> \<br>
+                                    &nbsp;&nbsp;<span class="text-blue-400">-H</span> <span class="text-green-400">"Authorization: Bearer sk-..."</span> \<br>
+                                    &nbsp;&nbsp;<span class="text-blue-400">-d</span> <span class="text-green-400">'{ "model": "llama-3", "stream": true }'</span>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-600 mb-2 uppercase tracking-wider">// Stream Response</div>
+                                    <div class="space-y-1">
+                                        <span class="text-blue-400">data:</span> { <span class="text-cyan-400">"content"</span>: <span class="text-white">"Hello"</span> }<br>
+                                        <span class="text-blue-400">data:</span> { <span class="text-cyan-400">"content"</span>: <span class="text-white">"!"</span> }<br>
+                                        <span class="text-blue-400">data:</span> { <span class="text-cyan-400">"content"</span>: <span class="text-white">" I"</span> }<br>
+                                        <span class="text-blue-400">data:</span> { <span class="text-cyan-400">"content"</span>: <span class="text-white">" am"</span> }<br>
+                                        <span class="text-blue-400">data:</span> { <span class="text-cyan-400">"content"</span>: <span class="text-white">" an"</span> }<br>
+                                        <span class="text-blue-400">data:</span> { <span class="text-cyan-400">"content"</span>: <span class="text-white bg-white/20">" AI"</span><span class="w-2 h-4 bg-white inline-block ml-1 animate-pulse align-middle"></span> }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 丰富的 AI 镜像社区 -->
+    <div class="py-24 bg-surface/30 relative z-10 overflow-hidden">
+         <div class="absolute inset-0 bg-grid opacity-20 z-0"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center mb-16 reveal">
+                <div class="inline-flex items-center gap-2 px-3 py-1 mb-6 text-xs font-medium tracking-wide text-cyan-300 uppercase bg-cyan-500/10 rounded-full border border-cyan-500/20">
+                    <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                    Community Hub
+                </div>
+                <h2 class="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
+                    丰富 AI 镜像，<span class="text-gradient">一键开箱即用</span>
+                </h2>
+                <div class="flex flex-col items-center justify-center gap-2 text-lg text-gray-400 max-w-3xl mx-auto leading-relaxed">
+                    <p>汇聚 <span class="text-white font-medium">300+ 精选 GPU 镜像</span>，覆盖 LLM、绘图、视频生成等热门领域。</p>
+                    <p><span class="text-white font-medium">0 部署成本</span>，让创意即刻落地。</p>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-5 gap-12 items-center" id="mirror-section">
+                <!-- 左侧分类导航 -->
+                <div class="lg:col-span-2 space-y-4 reveal">
+                    <!-- LLM (Active by default) -->
+                    <div class="category-item active active-category group relative p-6 pl-8 rounded-xl border border-white/5 cursor-pointer transition-all duration-300" data-category="llm" onclick="switchCategory('llm')">
+                        <div class="active-bg absolute inset-0 rounded-xl transition-all duration-300 border border-transparent"></div>
+                        <div class="relative z-10">
+                            <h3 class="text-xl font-bold text-white mb-2 category-title">LLM</h3>
+                            <p class="text-sm text-gray-400">语言模型、推理框架、模型训练</p>
+                        </div>
+                    </div>
+
+                    <!-- 图片生成 -->
+                    <div class="category-item group relative p-6 pl-8 rounded-xl border border-white/5 cursor-pointer transition-all duration-300" data-category="image" onclick="switchCategory('image')">
+                         <div class="active-bg absolute inset-0 rounded-xl opacity-0 transition-all duration-300 border border-transparent"></div>
+                        <div class="relative z-10">
+                            <h3 class="text-xl font-bold text-white mb-2 category-title">图片生成</h3>
+                            <p class="text-sm text-gray-400">ComfyUI、Lora训练、图像修复</p>
+                        </div>
+                    </div>
+
+                    <!-- 视频生成 -->
+                    <div class="category-item group relative p-6 pl-8 rounded-xl border border-white/5 cursor-pointer transition-all duration-300" data-category="video" onclick="switchCategory('video')">
+                        <div class="active-bg absolute inset-0 rounded-xl opacity-0 transition-all duration-300 border border-transparent"></div>
+                        <div class="relative z-10">
+                            <h3 class="text-xl font-bold text-white mb-2 category-title">视频生成</h3>
+                            <p class="text-sm text-gray-400">视频换脸、姿态迁移、视频短片</p>
+                        </div>
+                    </div>
+
+                    <!-- 语音生成 -->
+                    <div class="category-item group relative p-6 pl-8 rounded-xl border border-white/5 cursor-pointer transition-all duration-300" data-category="voice" onclick="switchCategory('voice')">
+                        <div class="active-bg absolute inset-0 rounded-xl opacity-0 transition-all duration-300 border border-transparent"></div>
+                        <div class="relative z-10">
+                            <h3 class="text-xl font-bold text-white mb-2 category-title">语音生成</h3>
+                            <p class="text-sm text-gray-400">语音克隆、语音识别、AI音乐</p>
+                        </div>
+                    </div>
+
+                     <!-- 更多分类 (Grid) -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="category-item group relative p-5 pl-6 rounded-xl border border-white/5 cursor-pointer transition-all duration-300" data-category="digital" onclick="switchCategory('digital')">
+                            <div class="active-bg absolute inset-0 rounded-xl opacity-0 transition-all duration-300 border border-transparent"></div>
+                            <div class="relative z-10">
+                                <h3 class="text-lg font-bold text-white mb-1 category-title">数字人</h3>
+                                <p class="text-xs text-gray-400">对话、实时直播</p>
+                            </div>
+                        </div>
+                        <div class="category-item group relative p-5 pl-6 rounded-xl border border-white/5 cursor-pointer transition-all duration-300" data-category="ai4s" onclick="switchCategory('ai4s')">
+                            <div class="active-bg absolute inset-0 rounded-xl opacity-0 transition-all duration-300 border border-transparent"></div>
+                            <div class="relative z-10">
+                                <h3 class="text-lg font-bold text-white mb-1 category-title">AI4S</h3>
+                                <p class="text-xs text-gray-400">深度学习、分子动力</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <a href="#" class="block w-full py-4 mt-6 text-center rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-900/20">
+                        立即体验
+                    </a>
+                </div>
+
+                <!-- 右侧镜像墙 (Floating Wall) -->
+                <div class="lg:col-span-3 relative h-[600px] reveal delay-200">
+                    <div class="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background z-10 pointer-events-none"></div>
+                    <div class="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background z-10 pointer-events-none"></div>
+                    
+                    <!-- 动态浮动容器 -->
+                    <div class="relative w-full h-full overflow-hidden mask-image-gradient">
+                        <div id="models-container" class="wall-transition absolute top-1/2 left-1/2 w-[120%] h-[120%] grid grid-cols-2 gap-4 p-4 animate-spin-slow origin-center" style="animation-duration: 80s;">
+                            <!-- JS 将动态填充这里的内容 -->
+                        </div>
+                    </div>
+
+                    <!-- 装饰线 -->
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] border border-indigo-500/10 rounded-full animate-pulse-slow pointer-events-none"></div>
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] border border-indigo-500/20 rounded-full pointer-events-none"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 聆听用户 & 合作伙伴 -->
+    <div class="py-24 relative z-10 overflow-hidden bg-black/40 border-t border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <div class="inline-flex items-center gap-2 px-3 py-1 mb-6 text-xs font-medium tracking-wide text-gray-300 uppercase bg-white/5 rounded-full border border-white/10">
+                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse"></span>
+                    Trusted by Innovators
+                </div>
+                <h2 class="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
+                    聆听用户声音，<span class="text-gradient">值得信赖</span>
+                </h2>
+                <div class="flex flex-col items-center justify-center gap-2 text-lg text-gray-400 max-w-3xl mx-auto leading-relaxed">
+                    <p>优刻得（股票代码：<span class="text-white font-medium">688158</span>）旗下中立云计算服务平台。</p>
+                    <p>安全、稳定、可靠，<span class="text-white font-medium">数万 AI 开发者</span>的共同选择。</p>
+                </div>
+            </div>
+
+            <!-- 合作伙伴 Logo 墙 -->
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-20 opacity-80">
+                <!-- University Logos -->
+                <div class="h-24 flex items-center justify-center bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.05] hover:border-white/10 transition-all group p-2">
+                    <img src="https://cdn.udelivrs.com/2025/09/fa7a2a6dc4bdb6f731c4cdc715b96797_1757911269492.png" alt="Peking University" class="max-h-16 w-auto object-contain filter grayscale brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity">
+                </div>
+                <div class="h-24 flex items-center justify-center bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.05] hover:border-white/10 transition-all group p-2">
+                    <img src="https://cdn.udelivrs.com/2025/09/7aab82f4349c22656c40208d67c22afe_1757911269516.png" alt="Tsinghua University" class="max-h-16 w-auto object-contain filter grayscale brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity">
+                </div>
+                <div class="h-24 flex items-center justify-center bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.05] hover:border-white/10 transition-all group p-2">
+                    <img src="https://cdn.udelivrs.com/2025/09/71739b204fbe6c560114d59c254b97ee_1757911269503.png" alt="Fudan University" class="max-h-16 w-auto object-contain filter grayscale brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity">
+                </div>
+                <div class="h-24 flex items-center justify-center bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.05] hover:border-white/10 transition-all group p-2">
+                    <img src="https://cdn.udelivrs.com/2025/09/aef3cebddfd360acf244883f8a8f2dd8_1757911269520.png" alt="Zhejiang University" class="max-h-16 w-auto object-contain filter grayscale brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity">
+                </div>
+                <div class="h-24 flex items-center justify-center bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.05] hover:border-white/10 transition-all group p-2">
+                    <img src="https://cdn.udelivrs.com/2025/09/6fb44b81cfe94a738fb9390a87ea67a5_1757911269508.png" alt="Oxford University" class="max-h-16 w-auto object-contain filter grayscale brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity">
+                </div>
+                <div class="h-24 flex items-center justify-center bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.05] hover:border-white/10 transition-all group p-2">
+                    <img src="https://cdn.udelivrs.com/2025/09/0a9fce1a13ab927af74414088ba5f1b5_1757911269518.png" alt="Sichuan University" class="max-h-16 w-auto object-contain filter grayscale brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity">
+                </div>
+
+                <!-- Company Logos -->
+                <div class="h-24 flex items-center justify-center bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.05] hover:border-white/10 transition-all group p-2">
+                    <img src="https://cdn.udelivrs.com/2025/09/266c0ce406f7f4e8c88aff97f313f053_1757911269512.png" alt="SenseTime" class="max-h-14 w-auto object-contain filter grayscale brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity">
+                </div>
+                <div class="h-24 flex items-center justify-center bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.05] hover:border-white/10 transition-all group p-2">
+                    <img src="https://cdn.udelivrs.com/2025/09/dc3adb1f53ba0fcd20432c08c9ef2cbd_1757911269500.png" alt="iFLYTEK" class="max-h-14 w-auto object-contain filter grayscale brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity">
+                </div>
+                <div class="h-24 flex items-center justify-center bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.05] hover:border-white/10 transition-all group p-2">
+                    <img src="https://cdn.udelivrs.com/2025/09/ae1160de3d235b0d77757dea8e3a0e37_1757911269515.png" alt="MiniMax" class="max-h-14 w-auto object-contain filter grayscale brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity">
+                </div>
+                <div class="h-24 flex items-center justify-center bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.05] hover:border-white/10 transition-all group p-2">
+                    <img src="https://cdn.udelivrs.com/2025/09/55189af1e6dc5fc5f027bcf0c7a17e03_1757899088234.png" alt="Mobvoi" class="max-h-14 w-auto object-contain filter grayscale brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity">
+                </div>
+                <div class="h-24 flex items-center justify-center bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.05] hover:border-white/10 transition-all group p-2">
+                    <img src="https://cdn.udelivrs.com/2025/09/10cb701d34afdd0b53cb35cbf5e92598_1757899088271.png" alt="Partner Logo" class="max-h-14 w-auto object-contain filter grayscale brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity">
+                </div>
+                <div class="h-24 flex items-center justify-center bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.05] hover:border-white/10 transition-all group p-2">
+                    <img src="https://cdn.udelivrs.com/2025/09/b064dd25c48dbc3442fac2abbe35af49_1757899088268.png" alt="Partner Logo" class="max-h-14 w-auto object-contain filter grayscale brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity">
+                </div>
+            </div>
+            </div>
+
+            <!-- 用户评价滚动 -->
+            <div class="relative w-full overflow-hidden fade-mask-x">
+                <div class="flex gap-6 animate-marquee hover:pause whitespace-nowrap py-4 w-max">
+                    <!-- Comment 1 -->
+                    <div class="inline-block w-[350px] p-6 rounded-2xl bg-[#121214] border border-white/5 hover:border-indigo-500/30 transition-colors whitespace-normal">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold">In</div>
+                            <span class="text-sm font-bold text-gray-300">对方正在输入ing</span>
+                        </div>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            "关机不收费很实在，适合科研狗，顺利搞完实验。价格比其他平台透明很多。"
+                        </p>
+                    </div>
+                    
+                    <!-- Comment 2 -->
+                    <div class="inline-block w-[350px] p-6 rounded-2xl bg-[#121214] border border-white/5 hover:border-indigo-500/30 transition-colors whitespace-normal">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-xs font-bold">Fa</div>
+                            <span class="text-sm font-bold text-gray-300">方方圆圆</span>
+                        </div>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            "我是冲着可以自行安装docker来的，自由度非常高，摆脱了虚拟化限制，环境配置很顺手。"
+                        </p>
+                    </div>
+
+                    <!-- Comment 3 -->
+                    <div class="inline-block w-[350px] p-6 rounded-2xl bg-[#121214] border border-white/5 hover:border-indigo-500/30 transition-colors whitespace-normal">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-xs font-bold">Gu</div>
+                            <span class="text-sm font-bold text-gray-300">国服饭桶</span>
+                        </div>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            "这个平台是为数不多凌晨都还有技术客服在线处理问题的，这点非常好，救了急。"
+                        </p>
+                    </div>
+
+                    <!-- Comment 4 -->
+                    <div class="inline-block w-[350px] p-6 rounded-2xl bg-[#121214] border border-white/5 hover:border-indigo-500/30 transition-colors whitespace-normal">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 text-xs font-bold">Hu</div>
+                            <span class="text-sm font-bold text-gray-300">花开富贵</span>
+                        </div>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            "网络加速很友好，下载 huggingface 模型效率快很多，变相省钱了，体验不错。"
+                        </p>
+                    </div>
+
+                    <!-- Comment 5 -->
+                    <div class="inline-block w-[350px] p-6 rounded-2xl bg-[#121214] border border-white/5 hover:border-indigo-500/30 transition-colors whitespace-normal">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold">Li</div>
+                            <span class="text-sm font-bold text-gray-300">李白不黑</span>
+                        </div>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            "试玩SD又怕踩坑，实名领了赠金，用社区镜像成功跑图，新手入门首选。"
+                        </p>
+                    </div>
+
+                    <!-- Duplicate for loop (FULL SET) -->
+                    <!-- Comment 1 Copy -->
+                    <div class="inline-block w-[350px] p-6 rounded-2xl bg-[#121214] border border-white/5 hover:border-indigo-500/30 transition-colors whitespace-normal">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold">In</div>
+                            <span class="text-sm font-bold text-gray-300">对方正在输入ing</span>
+                        </div>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            "关机不收费很实在，适合科研狗，顺利搞完实验。价格比其他平台透明很多。"
+                        </p>
+                    </div>
+                    
+                    <!-- Comment 2 Copy -->
+                    <div class="inline-block w-[350px] p-6 rounded-2xl bg-[#121214] border border-white/5 hover:border-indigo-500/30 transition-colors whitespace-normal">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-xs font-bold">Fa</div>
+                            <span class="text-sm font-bold text-gray-300">方方圆圆</span>
+                        </div>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            "我是冲着可以自行安装docker来的，自由度非常高，摆脱了虚拟化限制，环境配置很顺手。"
+                        </p>
+                    </div>
+
+                    <!-- Comment 3 Copy -->
+                    <div class="inline-block w-[350px] p-6 rounded-2xl bg-[#121214] border border-white/5 hover:border-indigo-500/30 transition-colors whitespace-normal">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-xs font-bold">Gu</div>
+                            <span class="text-sm font-bold text-gray-300">国服饭桶</span>
+                        </div>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            "这个平台是为数不多凌晨都还有技术客服在线处理问题的，这点非常好，救了急。"
+                        </p>
+                    </div>
+
+                    <!-- Comment 4 Copy -->
+                    <div class="inline-block w-[350px] p-6 rounded-2xl bg-[#121214] border border-white/5 hover:border-indigo-500/30 transition-colors whitespace-normal">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 text-xs font-bold">Hu</div>
+                            <span class="text-sm font-bold text-gray-300">花开富贵</span>
+                        </div>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            "网络加速很友好，下载 huggingface 模型效率快很多，变相省钱了，体验不错。"
+                        </p>
+                    </div>
+
+                    <!-- Comment 5 Copy -->
+                    <div class="inline-block w-[350px] p-6 rounded-2xl bg-[#121214] border border-white/5 hover:border-indigo-500/30 transition-colors whitespace-normal">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold">Li</div>
+                            <span class="text-sm font-bold text-gray-300">李白不黑</span>
+                        </div>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            "试玩SD又怕踩坑，实名领了赠金，用社区镜像成功跑图，新手入门首选。"
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5 py-16 bg-black text-sm relative z-10">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+                <div>
+                    <h4 class="text-white font-bold mb-4">产品</h4>
+                    <ul class="space-y-2 text-gray-500">
+                        <li><a href="#" class="hover:text-indigo-400 transition-colors">GPU 实例</a></li>
+                        <li><a href="#" class="hover:text-indigo-400 transition-colors">GPU 镜像社区</a></li>
+                        <li><a href="#" class="hover:text-indigo-400 transition-colors">模型 API 服务</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold mb-4">快速入口</h4>
+                    <ul class="space-y-2 text-gray-500">
+                        <li><a href="#" class="hover:text-indigo-400 transition-colors">文档中心</a></li>
+                        <li><a href="#" class="hover:text-indigo-400 transition-colors">API 文档</a></li>
+                        <li><a href="#" class="hover:text-indigo-400 transition-colors">用户协议</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold mb-4">友情链接</h4>
+                    <ul class="space-y-2 text-gray-500">
+                        <li><a href="#" class="hover:text-indigo-400 transition-colors">优刻得</a></li>
+                        <li><a href="#" class="hover:text-indigo-400 transition-colors">PICPIK.AI</a></li>
+                        <li><a href="#" class="hover:text-indigo-400 transition-colors">LangChain中文网</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold mb-4">关于</h4>
+                    <p class="text-gray-500 mb-2">隶属于优刻得科技股份有限公司</p>
+                    <p class="text-gray-500 mb-2">股票代码：688158</p>
+                    <p class="text-gray-500">中立、安全的云计算服务平台</p>
+                </div>
+            </div>
+            <div class="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-gray-600">
+                <p>Copyright © 2025 沪ICP备12020087号-61</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 简单的滚动监听脚本 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.1
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+            
+            // Initial render
+            switchCategory('llm');
+        });
+
+        // Data for models (Expanded)
+        const modelData = {
+            'llm': [
+                { id: 'DS', name: 'DeepSeek', detail: 'DeepSeek-R1-Distill', color: 'bg-blue-600' },
+                { id: 'QW', name: 'Qwen', detail: 'Qwen2.5-72B-Instruct', color: 'bg-purple-600' },
+                { id: 'OAI', name: 'OpenAI', detail: 'GPT-OSS-120B', color: 'bg-green-600' },
+                { id: 'LC', name: 'LangChain', detail: 'Langchain-Chatchat', color: 'bg-indigo-600' },
+                { id: 'LLM', name: 'LlamaFactory', detail: 'Factory-0.9.3.dev', color: 'bg-orange-600' },
+                { id: 'SD', name: 'Stable Diffusion', detail: 'SDXL-Turbo-WebUI', color: 'bg-pink-600' },
+                { id: 'GLM', name: 'ChatGLM', detail: 'GLM-4.5-Air', color: 'bg-teal-600' },
+                { id: 'Yi', name: 'Yi-Series', detail: 'Yi-34B-Chat-Int4', color: 'bg-red-600' },
+                { id: 'M', name: 'Mistral', detail: 'Mistral-Large-2', color: 'bg-yellow-600' },
+                { id: 'G', name: 'Gemma', detail: 'Gemma-7B-It', color: 'bg-cyan-600' },
+                { id: 'B', name: 'Baichuan', detail: 'Baichuan2-13B', color: 'bg-emerald-600' },
+                { id: 'P', name: 'Phi', detail: 'Phi-3-Mini-4k', color: 'bg-violet-600' }
+            ],
+            'image': [
+                { id: 'SD', name: 'Stable Diffusion', detail: 'SDXL-Lightning-4step', color: 'bg-pink-600' },
+                { id: 'CF', name: 'ComfyUI', detail: 'ComfyUI-Manager-V1', color: 'bg-purple-600' },
+                { id: 'MJ', name: 'Midjourney', detail: 'MJ-Proxy-API-V2', color: 'bg-blue-600' },
+                { id: 'FL', name: 'Flux', detail: 'Flux.1-Dev-FP8', color: 'bg-green-600' },
+                { id: 'FO', name: 'Fooocus', detail: 'Fooocus-MRE-Edition', color: 'bg-indigo-600' },
+                { id: 'AD', name: 'AnimateDiff', detail: 'AnimateDiff-Evolved', color: 'bg-orange-600' },
+                { id: 'CN', name: 'ControlNet', detail: 'ControlNet-v1.1-Tile', color: 'bg-red-600' },
+                { id: 'LR', name: 'LoRA', detail: 'LoRA-Scripts-GUI', color: 'bg-teal-600' },
+                { id: 'W', name: 'WebUI', detail: 'WebUI-Forge-Latest', color: 'bg-cyan-600' },
+                { id: 'K', name: 'Kohya', detail: 'Kohya-SS-GUI', color: 'bg-yellow-600' }
+            ],
+            'video': [
+                { id: 'SVD', name: 'SVD', detail: 'Stable Video Diffusion', color: 'bg-orange-600' },
+                { id: 'AD', name: 'AnimateDiff', detail: 'AnimateDiff-CLI', color: 'bg-blue-600' },
+                { id: 'M', name: 'MoonValley', detail: 'MoonValley-1.0-Beta', color: 'bg-purple-600' },
+                { id: 'P', name: 'Pika', detail: 'Pika-Labs-API-Proxy', color: 'bg-pink-600' },
+                { id: 'MS', name: 'ModelScope', detail: 'Text2Video-1.7B', color: 'bg-indigo-600' },
+                { id: 'Z', name: 'ZeroScope', detail: 'ZeroScope-V2-XL', color: 'bg-green-600' },
+                { id: 'R', name: 'Runway', detail: 'Gen-2-API-Wrapper', color: 'bg-red-600' },
+                { id: 'LA', name: 'LaVie', detail: 'LaVie-High-Res', color: 'bg-teal-600' }
+            ],
+            'voice': [
+                { id: 'GS', name: 'GPT-SoVITS', detail: 'GPT-SoVITS-WebUI', color: 'bg-teal-600' },
+                { id: 'CV', name: 'CosyVoice', detail: 'CosyVoice-300M-SFT', color: 'bg-blue-600' },
+                { id: 'W', name: 'Whisper', detail: 'Whisper-Large-V3', color: 'bg-green-600' },
+                { id: 'F', name: 'FunASR', detail: 'FunASR-Runtime-CPU', color: 'bg-indigo-600' },
+                { id: 'RV', name: 'RVC', detail: 'RVC-WebUI-v2', color: 'bg-pink-600' },
+                { id: 'B', name: 'Bert-VITS', detail: 'Bert-VITS2-2.3', color: 'bg-orange-600' },
+                { id: 'OV', name: 'OpenVoice', detail: 'OpenVoice-V2', color: 'bg-purple-600' },
+                { id: 'FS', name: 'Fish', detail: 'Fish-Speech-1.2', color: 'bg-cyan-600' }
+            ],
+            'digital': [
+                { id: 'DH', name: 'DigitalHuman', detail: 'Live-Streaming-2.0', color: 'bg-purple-600' },
+                { id: 'UE', name: 'Unreal', detail: 'UE5-MetaHuman-SDK', color: 'bg-blue-600' },
+                { id: 'ST', name: 'SadTalker', detail: 'SadTalker-Video-Lip', color: 'bg-orange-600' },
+                { id: 'MT', name: 'MuseTalk', detail: 'MuseTalk-Realtime', color: 'bg-pink-600' },
+                { id: 'W2', name: 'Wav2Lip', detail: 'Wav2Lip-GAN-HD', color: 'bg-green-600' },
+                { id: 'E', name: 'EMO', detail: 'EMO-Portrait-Video', color: 'bg-indigo-600' },
+                { id: 'V', name: 'V-Express', detail: 'V-Express-Portrait', color: 'bg-red-600' },
+                { id: 'L', name: 'Live2D', detail: 'Live2D-Cubism-SDK', color: 'bg-cyan-600' }
+            ],
+            'ai4s': [
+                { id: 'AF', name: 'AlphaFold', detail: 'AlphaFold-3-Pytorch', color: 'bg-indigo-600' },
+                { id: 'GM', name: 'Gromacs', detail: 'Gromacs-2024-CUDA', color: 'bg-green-600' },
+                { id: 'D', name: 'DeepMD', detail: 'DeepMD-Kit-v2.0', color: 'bg-blue-600' },
+                { id: 'LM', name: 'LAMMPS', detail: 'LAMMPS-Stable', color: 'bg-orange-600' },
+                { id: 'V', name: 'VASP', detail: 'VASP-6.3.0', color: 'bg-purple-600' },
+                { id: 'CP', name: 'CP2K', detail: 'CP2K-9.1-MPI', color: 'bg-red-600' },
+                { id: 'N', name: 'NAMD', detail: 'NAMD-3.0-Alpha', color: 'bg-cyan-600' },
+                { id: 'A', name: 'Amber', detail: 'Amber-22-GPU', color: 'bg-teal-600' }
+            ]
+        };
+
+        function switchCategory(category) {
+            // Update Active State on Left Side
+            document.querySelectorAll('.category-item').forEach(el => {
+                if(el.dataset.category === category) {
+                    el.classList.add('active', 'active-category');
+                    // Remove old JS-added classes if any, rely on CSS active-category
+                    el.classList.remove('border-white/5');
+                } else {
+                    el.classList.remove('active', 'active-category');
+                    el.classList.add('border-white/5');
+                }
+            });
+
+            // Update Content on Right Side with Animation
+            const container = document.getElementById('models-container');
+            
+            // Step 1: Fade out and scale down
+            container.classList.add('wall-hidden');
+            
+            setTimeout(() => {
+                const models = modelData[category] || modelData['llm'];
+                
+                // Generate HTML for models
+                const mid = Math.ceil(models.length / 2);
+                const col1 = models.slice(0, mid);
+                const col2 = models.slice(mid);
+                
+                let html = `
+                    <div class="space-y-4 -mt-32">
+                        ${col1.map(m => createModelCard(m)).join('')}
+                    </div>
+                    <div class="space-y-4">
+                        ${col2.map(m => createModelCard(m)).join('')}
+                    </div>
+                `;
+                
+                container.innerHTML = html;
+                
+                // Step 2: Fade in and scale up
+                requestAnimationFrame(() => {
+                    container.classList.remove('wall-hidden');
+                });
+            }, 300); // Wait for fade out to finish
+        }
+
+        function createModelCard(m) {
+            return `
+                <div class="p-4 rounded-xl bg-[#1e293b]/80 backdrop-blur-md border border-white/10 flex items-center gap-4 transform hover:scale-105 transition-all shadow-xl hover:bg-[#1e293b] hover:border-indigo-500/30">
+                    <div class="w-10 h-10 ${m.color} rounded flex items-center justify-center font-bold text-xs shrink-0 shadow-lg">${m.id}</div>
+                    <div class="min-w-0">
+                        <div class="text-xs text-gray-400 truncate">${m.name}</div>
+                        <div class="text-sm font-bold text-white truncate">${m.detail}</div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
